@@ -25,7 +25,7 @@ class OpenClawClient {
     private val gson = Gson()
 
     /**
-     * POST message to webhook URL and return response
+     * POST message to OpenResponses API endpoint and return response
      */
     suspend fun sendMessage(
         webhookUrl: String,
@@ -34,17 +34,18 @@ class OpenClawClient {
         authToken: String? = null
     ): Result<OpenClawResponse> = withContext(Dispatchers.IO) {
         try {
-            // Simple request body for /hooks/voice
+            // OpenResponses API format for /v1/responses
             val requestBody = JsonObject().apply {
-                addProperty("message", message)
-                addProperty("session_id", sessionId)
+                addProperty("model", "openclaw")
+                addProperty("input", message)
+                addProperty("user", sessionId)
             }
 
             val jsonBody = gson.toJson(requestBody)
                 .toRequestBody("application/json; charset=utf-8".toMediaType())
 
             val requestBuilder = Request.Builder()
-                .url(webhookUrl)  // Use URL as-is
+                .url(webhookUrl)  // Use URL as-is (should be /v1/responses)
                 .post(jsonBody)
                 .addHeader("Content-Type", "application/json")
                 .addHeader("Accept", "application/json")
@@ -112,10 +113,11 @@ class OpenClawClient {
                 // Fallthrough to POST on error (some servers reject HEAD)
             }
 
-            // Fallback: POST with dummy data
+            // Fallback: POST with OpenResponses format
             val requestBody = JsonObject().apply {
-                addProperty("message", "ping")
-                addProperty("session_id", "test-connection")
+                addProperty("model", "openclaw")
+                addProperty("input", "ping")
+                addProperty("user", "test-connection")
             }
             
             val jsonBody = gson.toJson(requestBody)
@@ -146,14 +148,36 @@ class OpenClawClient {
     }
 
     /**
+     * Extract text from OpenResponses API output format
+     */
+    private fun extractOpenResponsesText(obj: JsonObject): String? {
+        val output = obj.getAsJsonArray("output") ?: return null
+        for (item in output) {
+            val itemObj = item.asJsonObject
+            if (itemObj.get("type")?.asString == "message") {
+                val content = itemObj.getAsJsonArray("content") ?: continue
+                for (part in content) {
+                    val partObj = part.asJsonObject
+                    if (partObj.get("type")?.asString == "output_text") {
+                        return partObj.get("text")?.asString
+                    }
+                }
+            }
+        }
+        return null
+    }
+
+    /**
      * Extract response text from various JSON formats
      */
     private fun extractResponseText(json: String): String? {
         return try {
             val obj = gson.fromJson(json, JsonObject::class.java)
             
+            // OpenResponses API format: output[0].content[0].text
+            extractOpenResponsesText(obj)
             // OpenClaw /hooks/voice format: { ok, response, session_id }
-            obj.get("response")?.asString
+            ?: obj.get("response")?.asString
             // OpenAI format: choices[0].message.content
             ?: obj.getAsJsonArray("choices")?.let { choices ->
                 choices.firstOrNull()?.asJsonObject
