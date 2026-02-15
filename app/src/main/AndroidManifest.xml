@@ -14,6 +14,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     
+    <!-- Wake lock for conversation service -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    
     <!-- バッテリー最適化除外リクエスト -->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     
@@ -91,6 +94,12 @@
                 <action android:name="android.speech.RecognitionService" />
             </intent-filter>
         </service>
+
+        <!-- Conversation Service (voice loop survives screen-off) -->
+        <service
+            android:name=".service.ConversationService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
 
         <!-- Hotword Detection Service (常時聴取) -->
         <service
