@@ -78,6 +78,7 @@ class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                     settings = settings,
                     diagnostic = voiceDiagnostic,
                     onOpenSettings = { startActivity(Intent(this, SettingsActivity::class.java)) },
+                    onOpenLogs = { startActivity(Intent(this, LogActivity::class.java)) },
                     onOpenAssistantSettings = { openAssistantSettings() },
                     onToggleHotword = { enabled -> toggleHotwordService(enabled) },
                     onRefreshDiagnostics = { 
@@ -163,6 +164,7 @@ fun MainScreen(
     settings: SettingsRepository,
     diagnostic: VoiceDiagnostic?,
     onOpenSettings: () -> Unit,
+    onOpenLogs: () -> Unit,
     onOpenAssistantSettings: () -> Unit,
     onToggleHotword: (Boolean) -> Unit,
     onRefreshDiagnostics: () -> Unit
@@ -198,6 +200,9 @@ fun MainScreen(
                 actions = {
                     IconButton(onClick = { showHowToUse = true }) {
                         Icon(Icons.AutoMirrored.Filled.HelpOutline, contentDescription = stringResource(R.string.how_to_use))
+                    }
+                    IconButton(onClick = onOpenLogs) {
+                        Icon(Icons.Default.Article, contentDescription = "View logs")
                     }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.settings_title))

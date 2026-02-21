@@ -24,6 +24,7 @@ import org.vosk.android.SpeechService
 import org.vosk.android.StorageService
 import java.io.IOException
 import org.json.JSONObject
+import com.openclaw.assistant.util.AppLogger
 
 /**
  * ホットワード検知サービス (Vosk)
@@ -239,6 +240,7 @@ class HotwordService : Service(), VoskRecognitionListener {
             val detected = wakeWords.any { word -> text.contains(word) }
             
             if (detected) {
+                AppLogger.i(TAG, "Wake word detected: \"$text\"")
                 Log.e(TAG, "Hotword detected! Text: $text")
                 onHotwordDetected()
             }

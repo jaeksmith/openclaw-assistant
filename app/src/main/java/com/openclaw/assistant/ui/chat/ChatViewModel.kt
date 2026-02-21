@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.openclaw.assistant.api.OpenClawClient
+import com.openclaw.assistant.util.AppLogger
 import com.openclaw.assistant.data.SettingsRepository
 import com.openclaw.assistant.speech.SpeechRecognizerManager
 import com.openclaw.assistant.speech.SpeechResult
@@ -168,6 +169,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // Ensure we have a session
         val sessionId = _currentSessionId.value ?: return
 
+        AppLogger.i(TAG, "Chat send: \"$text\"")
         _uiState.update { it.copy(isThinking = true, error = null) }
 
         viewModelScope.launch {
@@ -185,6 +187,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 result.fold(
                     onSuccess = { response ->
                         val responseText = response.getResponseText() ?: "No response"
+                        AppLogger.i(TAG, "Chat response: \"${responseText.take(120)}${if (responseText.length > 120) "…" else ""}\"")
                         // Save AI Message
                         chatRepository.addMessage(sessionId, responseText, isUser = false)
                         
@@ -200,9 +203,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         }
                     },
                     onFailure = { error ->
+                        AppLogger.e(TAG, "Chat API error: ${error.message}")
                         _uiState.update { it.copy(isThinking = false, error = error.message) }
-                        // Ideally log error as system message? 
-                        // For now just UI state.
                     }
                 )
             } catch (e: Exception) {

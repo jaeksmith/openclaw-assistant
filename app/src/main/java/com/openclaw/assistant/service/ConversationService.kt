@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import com.openclaw.assistant.util.AppLogger
 
 /**
  * Foreground service that owns the voice conversation loop.
@@ -117,6 +118,7 @@ class ConversationService : Service() {
     // --- Public API for bound clients ---
 
     fun startConversation() {
+        AppLogger.i(TAG, "Conversation started")
         acquireWakeLock()
         sendPauseBroadcast()
 
@@ -150,6 +152,7 @@ class ConversationService : Service() {
     }
 
     fun stopConversation() {
+        AppLogger.i(TAG, "Conversation stopped")
         listeningJob?.cancel()
         listeningJob = null
         ttsManager.stop()
@@ -190,6 +193,7 @@ class ConversationService : Service() {
                 speechManager.startListening(null).collectLatest { result ->
                     when (result) {
                         is SpeechResult.Ready -> {
+                            AppLogger.i(TAG, "Speech recognizer ready — listening")
                             _conversationState.value = AssistantState.LISTENING
                             toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP)
                         }
@@ -208,6 +212,7 @@ class ConversationService : Service() {
                             }
                         }
                         is SpeechResult.Result -> {
+                            AppLogger.i(TAG, "Speech recognized: \"${result.text}\"")
                             hasActuallySpoken = true
                             _userQuery.value = result.text
                             sendToOpenClaw(result.text)
@@ -219,17 +224,21 @@ class ConversationService : Service() {
 
                             if (isTimeout && settings.continuousMode && elapsed < 5000) {
                                 Log.d(TAG, "Speech timeout within 5s window ($elapsed ms), retrying...")
+                                AppLogger.d(TAG, "Silence timeout within 5s window, retrying (elapsed=${elapsed}ms)")
                                 // Continue to next loop iteration
                             } else if (isTimeout) {
                                 // Silence timeout — show error with retry option rather than silently dying
+                                AppLogger.w(TAG, "Silence timeout (elapsed=${elapsed}ms) — no speech detected")
                                 Log.d(TAG, "Silence timeout, showing error state")
                                 _conversationState.value = AssistantState.ERROR
                                 _errorMessage.value = getString(R.string.error_speech_input_timeout)
                                 hasActuallySpoken = true
                             } else if (result.code == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
+                                AppLogger.w(TAG, "Speech recognizer busy, retrying after 1s")
                                 speechManager.destroy()
                                 delay(1000)
                             } else {
+                                AppLogger.e(TAG, "Speech error code=${result.code}: ${result.message}")
                                 _conversationState.value = AssistantState.ERROR
                                 _errorMessage.value = result.message
                                 hasActuallySpoken = true
@@ -247,6 +256,7 @@ class ConversationService : Service() {
     }
 
     private fun sendToOpenClaw(message: String) {
+        AppLogger.i(TAG, "Sending to API: \"$message\"")
         _conversationState.value = AssistantState.THINKING
         _displayText.value = ""
 
@@ -267,6 +277,7 @@ class ConversationService : Service() {
                 onSuccess = { response ->
                     val responseText = response.getResponseText()
                     if (responseText != null) {
+                        AppLogger.i(TAG, "API response: \"${responseText.take(120)}${if (responseText.length > 120) "…" else ""}\"")
                         _displayText.value = responseText
 
                         // Save AI Message
@@ -289,6 +300,7 @@ class ConversationService : Service() {
                     }
                 },
                 onFailure = { error ->
+                    AppLogger.e(TAG, "API error: ${error.message}")
                     Log.e(TAG, "API error", error)
                     _conversationState.value = AssistantState.ERROR
                     _errorMessage.value = error.message ?: getString(R.string.error_network)

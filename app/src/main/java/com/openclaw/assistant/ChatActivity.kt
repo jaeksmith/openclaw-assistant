@@ -1,6 +1,7 @@
 package com.openclaw.assistant
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
@@ -101,6 +103,7 @@ class ChatActivity : ComponentActivity(), TextToSpeech.OnInitListener {
                     },
                     onStopListening = { viewModel.stopListening() },
                     onStopSpeaking = { viewModel.stopSpeaking() },
+                    onOpenLogs = { startActivity(Intent(this, LogActivity::class.java)) },
                     onBack = { finish() },
                     onSelectSession = { viewModel.selectSession(it) },
                     onCreateSession = { viewModel.createNewSession() },
@@ -175,6 +178,7 @@ fun ChatScreen(
     onStartListening: () -> Unit,
     onStopListening: () -> Unit,
     onStopSpeaking: () -> Unit,
+    onOpenLogs: () -> Unit,
     onBack: () -> Unit,
     onSelectSession: (String) -> Unit,
     onCreateSession: () -> Unit,
@@ -294,6 +298,9 @@ fun ChatScreen(
                         }
                     },
                     actions = {
+                        IconButton(onClick = onOpenLogs) {
+                            Icon(Icons.Default.Article, contentDescription = "View logs")
+                        }
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = stringResource(R.string.menu))
                         }

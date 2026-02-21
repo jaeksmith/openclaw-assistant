@@ -66,6 +66,12 @@
             android:exported="false"
             android:theme="@style/Theme.OpenClawAssistant" />
 
+        <!-- Log viewer -->
+        <activity
+            android:name=".LogActivity"
+            android:exported="false"
+            android:theme="@style/Theme.OpenClawAssistant" />
+
         <!-- Voice Interaction Service (ホームボタン長押し) -->
         <service
             android:name=".service.OpenClawAssistantService"
