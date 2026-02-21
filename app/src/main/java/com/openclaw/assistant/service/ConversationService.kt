@@ -56,7 +56,7 @@ class ConversationService : Service() {
     private lateinit var toneGenerator: ToneGenerator
     private var wakeLock: PowerManager.WakeLock? = null
 
-    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     // Observable state for UI
     private val _conversationState = MutableStateFlow(AssistantState.IDLE)
@@ -220,6 +220,11 @@ class ConversationService : Service() {
                             if (isTimeout && settings.continuousMode && elapsed < 5000) {
                                 Log.d(TAG, "Speech timeout within 5s window ($elapsed ms), retrying...")
                                 // Continue to next loop iteration
+                            } else if (isTimeout) {
+                                // Silence timeout — not a real error, just end the conversation gracefully
+                                Log.d(TAG, "Silence timeout, ending conversation gracefully")
+                                hasActuallySpoken = true
+                                stopConversation()
                             } else if (result.code == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
                                 speechManager.destroy()
                                 delay(1000)

@@ -57,8 +57,8 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
     override val savedStateRegistry: androidx.savedstate.SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
     override val viewModelStore: androidx.lifecycle.ViewModelStore = androidx.lifecycle.ViewModelStore()
 
-    // Service binding
-    private var conversationService: ConversationService? = null
+    // Service binding — mutableStateOf so Compose recomposes when service connects
+    private var conversationService by mutableStateOf<ConversationService?>(null)
     private var bound = false
 
     private val serviceConnection = object : ServiceConnection {
@@ -109,6 +109,14 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
                 val partial = svc?.partialText?.collectAsState()?.value ?: ""
                 val error = svc?.errorMessage?.collectAsState()?.value
                 val level = svc?.audioLevel?.collectAsState()?.value ?: 0f
+
+                // Auto-dismiss when service signals conversation ended (IDLE after being active)
+                LaunchedEffect(state) {
+                    if (state == AssistantState.IDLE && svc != null) {
+                        // Service stopped the conversation — close the overlay
+                        finish()
+                    }
+                }
 
                 AssistantUI(
                     state = state,
