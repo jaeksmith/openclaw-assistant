@@ -111,6 +111,22 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 createNewSession()
             }
         }
+
+        // Sync with voice session: if settings.sessionId changes externally
+        // (ConversationService created/switched session), follow it
+        viewModelScope.launch {
+            var lastKnownSettingsSession = settings.sessionId
+            while (true) {
+                kotlinx.coroutines.delay(2000)
+                val settingsSession = settings.sessionId
+                if (settingsSession.isNotBlank() && settingsSession != lastKnownSettingsSession
+                    && settingsSession != _currentSessionId.value) {
+                    AppLogger.i("ChatViewModel", "Voice session detected, following: $settingsSession")
+                    _currentSessionId.value = settingsSession
+                    lastKnownSettingsSession = settingsSession
+                }
+            }
+        }
     }
 
     fun createNewSession() {

@@ -124,20 +124,28 @@ class ConversationService : Service() {
         acquireWakeLock()
         sendPauseBroadcast()
 
-        // Create a new chat session if needed
+        // Reuse the active session from settings (shared with ChatActivity),
+        // only create a new one if none exists yet
         if (currentSessionId == null) {
-            scope.launch {
-                try {
-                    currentSessionId = chatRepository.createSession(
-                        title = String.format(
-                            getString(R.string.default_session_title_format),
-                            java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
-                                .format(java.util.Date())
+            val existingId = settings.sessionId.takeIf { it.isNotBlank() }
+            if (existingId != null) {
+                AppLogger.d(TAG, "Reusing existing session: $existingId")
+                currentSessionId = existingId
+            } else {
+                scope.launch {
+                    try {
+                        currentSessionId = chatRepository.createSession(
+                            title = String.format(
+                                getString(R.string.default_session_title_format),
+                                java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+                                    .format(java.util.Date())
+                            )
                         )
-                    )
-                    settings.sessionId = currentSessionId!!
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to create DB session", e)
+                        settings.sessionId = currentSessionId!!
+                        AppLogger.i(TAG, "Created new session: $currentSessionId")
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to create DB session", e)
+                    }
                 }
             }
         }
@@ -229,12 +237,24 @@ class ConversationService : Service() {
                                 AppLogger.d(TAG, "Silence timeout within 5s window, retrying (elapsed=${elapsed}ms)")
                                 // Continue to next loop iteration
                             } else if (isTimeout) {
-                                // Silence timeout — show error with retry option rather than silently dying
+                                // Silence timeout — show error with retry option
                                 AppLogger.w(TAG, "Silence timeout (elapsed=${elapsed}ms) — no speech detected")
                                 Log.d(TAG, "Silence timeout, showing error state")
                                 _conversationState.value = AssistantState.ERROR
                                 _errorMessage.value = getString(R.string.error_speech_input_timeout)
                                 hasActuallySpoken = true
+                                // Resume hotword NOW so wake word works again even while error is shown
+                                abandonAudioFocus()
+                                sendResumeBroadcast()
+                                releaseWakeLock()
+                                // Auto-cleanup after 30s in case screen is off and user can't see/dismiss
+                                scope.launch {
+                                    delay(30_000)
+                                    if (_conversationState.value == AssistantState.ERROR) {
+                                        AppLogger.d(TAG, "Auto-cleanup: error state timed out, stopping service")
+                                        stopConversation()
+                                    }
+                                }
                             } else if (result.code == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
                                 AppLogger.w(TAG, "Speech recognizer busy, retrying after 1s")
                                 speechManager.destroy()
