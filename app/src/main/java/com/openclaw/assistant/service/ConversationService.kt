@@ -57,7 +57,9 @@ class ConversationService : Service() {
     private lateinit var toneGenerator: ToneGenerator
     private var wakeLock: PowerManager.WakeLock? = null
 
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    // SpeechRecognizer and TTS require the main thread. API calls inside
+    // OpenClawClient already use withContext(Dispatchers.IO) so this is safe.
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     // Observable state for UI
     private val _conversationState = MutableStateFlow(AssistantState.IDLE)
