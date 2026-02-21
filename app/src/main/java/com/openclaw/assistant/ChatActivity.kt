@@ -308,6 +308,18 @@ fun ChatScreen(
             },
             bottomBar = {
                 Column {
+                    if (uiState.error != null) {
+                        Text(
+                            text = "⚠️ ${uiState.error}",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                      if (uiState.partialText.isNotBlank()) {
                          Text(
                              text = uiState.partialText,

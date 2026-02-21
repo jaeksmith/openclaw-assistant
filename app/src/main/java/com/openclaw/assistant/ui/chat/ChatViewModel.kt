@@ -168,7 +168,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         // Ensure we have a session
         val sessionId = _currentSessionId.value ?: return
 
-        _uiState.update { it.copy(isThinking = true) }
+        _uiState.update { it.copy(isThinking = true, error = null) }
 
         viewModelScope.launch {
             try {

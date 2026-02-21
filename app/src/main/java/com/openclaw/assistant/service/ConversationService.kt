@@ -221,10 +221,11 @@ class ConversationService : Service() {
                                 Log.d(TAG, "Speech timeout within 5s window ($elapsed ms), retrying...")
                                 // Continue to next loop iteration
                             } else if (isTimeout) {
-                                // Silence timeout — not a real error, just end the conversation gracefully
-                                Log.d(TAG, "Silence timeout, ending conversation gracefully")
+                                // Silence timeout — show error with retry option rather than silently dying
+                                Log.d(TAG, "Silence timeout, showing error state")
+                                _conversationState.value = AssistantState.ERROR
+                                _errorMessage.value = getString(R.string.error_speech_input_timeout)
                                 hasActuallySpoken = true
-                                stopConversation()
                             } else if (result.code == SpeechRecognizer.ERROR_RECOGNIZER_BUSY) {
                                 speechManager.destroy()
                                 delay(1000)

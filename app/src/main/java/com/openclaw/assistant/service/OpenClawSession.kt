@@ -110,9 +110,12 @@ class OpenClawSession(context: Context) : VoiceInteractionSession(context),
                 val error = svc?.errorMessage?.collectAsState()?.value
                 val level = svc?.audioLevel?.collectAsState()?.value ?: 0f
 
-                // Auto-dismiss when service signals conversation ended (IDLE after being active)
+                // Track whether we've ever been active so we don't dismiss before the
+                // conversation even starts (e.g. speech recognizer fails immediately on launch)
+                var wasEverActive by remember { mutableStateOf(false) }
                 LaunchedEffect(state) {
-                    if (state == AssistantState.IDLE && svc != null) {
+                    if (state != AssistantState.IDLE) wasEverActive = true
+                    if (state == AssistantState.IDLE && wasEverActive && svc != null) {
                         // Service stopped the conversation — close the overlay
                         finish()
                     }
